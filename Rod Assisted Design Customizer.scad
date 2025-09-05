@@ -1,7 +1,6 @@
 //Dowel Aided Design - Parametric Modular Dowel Rod/ Tube System
 //by Mitch Cerroni - Mitch 3D (mitch3D.com)
 //https://github.com/themitch22/Rod-Assisted-Design-OpenSCAD
-//Bluesky @themitch22.bsky.social‬
 //Original repository: https://www.printables.com/model/1402479/
 
 //number of faces, optimize for rendering / 3D printing. 
