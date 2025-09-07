@@ -29,6 +29,9 @@ horzAngle = 90;
 // Vertical angle (degrees) for side legs, negative values disable flat features and lowers center leg.
 vertAngle = 0; 
 
+// If this list is populated, it will override the horzAngle and populate . If it one 360 degrees it'll be ignored. example [0, 30, 180, 270]
+horzAngleList = [0, 90, 135];
+
 // Legth in mm for the center leg, this is to compensate for the possible angles of side legs as you might want clearance to access screw holes, or have a shorter middle leg for some reason.
 centerLegLength = 50;
 
@@ -124,6 +127,8 @@ stopperCenter = stopperEnable >= 2 ? legDia() : 0;
 
 echo(legLength);
 echo(legHorzAngle);
+horzAngleListNum = len(horzAngleList);
+echo(horzAngleListNum);
 
 // Creates leg with chamfer.
 module leg(length){
@@ -337,14 +342,30 @@ module connector(){
                     translate([0,0,-legDia()/2]){
                         leg(centerLegLength+legDia());
                     }
-                echo(((legLength+legDia()/2)*cos(-vertAngle)));
-                for(legNum = [1:1:legNum]){ 
-                    translate([0,0,0]){
-                        rotate([90-vertAngle,0,legHorzAngle*(legNum+0.5)]){
-                            leg(legLength+legDia()/2);
+                
+                if (horzAngleListNum <= 0) {    
+                    for(legNum = [1:1:legNum]){ 
+                        translate([0,0,0]){
+                            rotate([90-vertAngle,0,legHorzAngle*(legNum+0.5)]){
+                                leg(legLength+legDia()/2);
+                            }
                         }
                     }
                 }
+                
+                else {
+                    for(legNum = [0:1:horzAngleListNum-1]){ 
+                        translate([0,0,0]){
+                            rotate([90-vertAngle,0,horzAngleList[legNum]]){
+                                echo(horzAngleList[legNum]);
+                                leg(legLength+legDia()/2);
+                            }
+                        }
+                    }
+                }
+                
+                
+                
                 
             }
         
@@ -359,15 +380,29 @@ module connector(){
                         }
                     }
                 }
+                
                 // Upward angle scale center dowelhole to match angle.
                 else 
                     translate([0,0,-legDia()/2]){          
                         dowelhole(centerLegLength+legDia(), centerLegLength - screwOffset + legDia(), teardropEnable, stopperCenter);
                     }
-                for(legNum = [1:1:legNum]){ 
-                    translate([0,0,0]){
-                        rotate([90-vertAngle,0,legHorzAngle*(legNum+0.5)]){
-                            dowelhole(legLength+legDia()/2+thickness, legLength - screwOffset  + legDia()/2, teardropEnable, stopperLeg);
+                    
+                if (horzAngleListNum <= 0) {
+                    for(legNum = [1:1:legNum]){ 
+                        translate([0,0,0]){
+                            rotate([90-vertAngle,0,legHorzAngle*(legNum+0.5)]){
+                                dowelhole(legLength+legDia()/2+thickness, legLength - screwOffset  + legDia()/2, teardropEnable, stopperLeg);
+                            }
+                        }
+                    }
+                }
+
+                else {
+                    for(legNum = [0:1:horzAngleListNum-1]){ 
+                        translate([0,0,0]){
+                            rotate([90-vertAngle,0,horzAngleList[legNum]]){
+                                dowelhole(legLength+legDia()/2+thickness, legLength - screwOffset  + legDia()/2, teardropEnable, stopperLeg);
+                            }
                         }
                     }
                 }
@@ -395,9 +430,19 @@ module connector(){
             }   
         }
         
-        if (ribSize > 0 && vertAngle == 0 && ribSize < legLength - legDia()/2) {
+        if (ribSize > 0 && vertAngle == 0 && ribSize < legLength - legDia()/2 && horzAngleListNum <= 0) {
             for(legNum = [1:1:legNum]){ 
                 rotate([0,0,270+legHorzAngle*(legNum+0.5)]) {
+                    translate([legDia()/2 - thickness/2, 0 ,legDia()/2 - (flatTopEnable == 1 ? flatTopDepth : 0)]) {   
+                        rib(ribSize); // Rib feature
+                    }
+                }
+            }
+        }
+        
+        else if (ribSize > 0 && vertAngle == 0 && ribSize < legLength - legDia()/2 && horzAngleListNum > 0) {
+            for(legNum = [0:1:horzAngleListNum-1]){ 
+                rotate([0,0,270+horzAngleList[legNum]]) {
                     translate([legDia()/2 - thickness/2, 0 ,legDia()/2 - (flatTopEnable == 1 ? flatTopDepth : 0)]) {   
                         rib(ribSize); // Rib feature
                     }
