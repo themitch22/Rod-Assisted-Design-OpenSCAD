@@ -11,14 +11,14 @@ $fn = 50;
 // 1 = dowel connector, 2 = spacer/panel mount, 3 = cross connector, 4 = endcap
 type = 1;
 
-// Diameter in mm for dowel holes, keep in mind tolerance when printing.
-dowelDia = 9.8;
+// Diameter in mm for dowel holes, keep in mind tolerance when printing. 1in ~ 26mm, 1/2in ~ 13mm, 3/8 ~10mm, 1/4in ~6.5mm
+dowelDia = 26;
 
 // Thickness of the walls in mm, bigger number is stronger but can cause interferences.
-thickness = 3;
+thickness = 6;
 
 // Chamfer length in mm, this softens edges and looks nicer.
-chamfer = 1;
+chamfer = 3;
 
 // Total number of side legs. If legNum and horzAngle are more than 360 degrees it will evenly distribute leg count around center leg.
 legNum = 3; 
@@ -30,20 +30,20 @@ horzAngle = 90;
 vertAngle = 0; 
 
 // Legth in mm for the center leg, this is to compensate for the possible angles of side legs as you might want clearance to access screw holes, or have a shorter middle leg for some reason.
-centerLegLength = 25;
+centerLegLength = 50;
 
 // Length in mm, this length is additional to the leg total diameter.
-lengthLeg = 25;
+lengthLeg = 50;
 
 // If vertical angle is positive, a rib between legs and center to provide strength. 
 // 0 = disabled. Rib will disable if larger than the centerLegLength or legLength (including legDia).
-ribSize = 10;
+ribSize = 20;
 
 // Adding internal leg stoppers to prevent dowels going too far and intersecting
 // Only available for connector, not for spacer/panel mount or cross connector. 
 // The geometry might have issues with certain angles.
 // 0 = disabled, 1 = stoppers in leg(s) and center leg, 2 = stoppers in leg(s) only
-stopperEnable = 2;
+stopperEnable = 1;
 
 // If vertical angle is positive, it flattens bottom for printing or shelves. 1 = True
 flatBottomEnable = 1;
@@ -51,7 +51,7 @@ flatBottomEnable = 1;
 // Amount in mm to flatten the bottom for easier printing and/or shelving depending on orientation. 
 // If using cross connector, this can be adjusted to suit your printability needs.
 // Keep this under thickness value.
-flatBottomDepth = 1;
+flatBottomDepth = 3;
 
 // If vertical angle is 0 (flat), it flattens top of legs for shelves. 1 = True.
 flatTopEnable = 1;
@@ -60,7 +60,7 @@ flatTopEnable = 1;
 // If spacer/panel mount is selected, it will compensate height to be co-planar to connector tops. 
 // Not every connector will have this flat side depending on orientation which may cause alignment issues.
 // Keep this under thickness value.
-flatTopDepth = 1;
+flatTopDepth = 3;
 
 // Arched top of dowel hole to reduce overhangs. 1 = True 
 teardropEnable = 1;
@@ -80,10 +80,10 @@ screwDia = 4;
 
 // Angle in degrees on the leg where screw hole is placed. Top/Bottom holes = 0, Sides = 90. 
 // You may have some intersecting geometry issues or may not be able to reach it the screws depending on the angle. 
-screwAngle = 90;
+screwAngle = 0;
 
 // Offset in mm for screw hole from leg length inward, a higher value goes towards the center. 
-screwOffset = 12; 
+screwOffset = 18; 
 
 // Countersink and counterbore screw depth in mm for screw heads, thickness from dowel out. 
 screwDepth = 0;
@@ -94,7 +94,7 @@ screwCBDia = 6.5;
 //Spacer/Panel Mount Parameters
 
 // For spacer/panel mounts, the lenth of the tab. 0 or skadisTab enabled diables it.
-tabLength = 12;
+tabLength = 26;
 
 // For spacer/panel mount, it adds a Ikea Skadis capable hook. 0 = disabled, 1 = verticle, 2 = horizontal. 
 // Fixed dimensions so may cause interference issues. 
@@ -224,7 +224,7 @@ module chamfercube(length, width, height) {
         
         cube([length, width, height]);
         
-        cubechamfer = sqrt(chamfer*2);
+        cubechamfer = chamfer * sqrt(2); // Allows chamfercube to align with leg chamfer, diagonal of a square
         
         translate([0,width/2,0]) {
             rotate([0,45,0]) {
@@ -386,7 +386,9 @@ module connector(){
                     translate([0,0,legDia()/2-flatTopDepth]){
                         difference() {
                             cylinder(h=thickness,d=(legLength+legDia())*2);
-                            cylinder(h=thickness,d=legDia());
+                            if (centerLegLength > 0) { //only flatten whole top when center leg is not wanted (for better shelf mounting)
+                                cylinder(h=thickness,d=legDia());
+                            }
                         }
                     }
                 }
@@ -396,7 +398,7 @@ module connector(){
         if (ribSize > 0 && vertAngle == 0 && ribSize < legLength - legDia()/2) {
             for(legNum = [1:1:legNum]){ 
                 rotate([0,0,270+legHorzAngle*(legNum+0.5)]) {
-                    translate([legDia()/2 - thickness/2, 0 ,legDia()/2 - flatTopDepth]) {   
+                    translate([legDia()/2 - thickness/2, 0 ,legDia()/2 - (flatTopEnable == 1 ? flatTopDepth : 0)]) {   
                         rib(ribSize); // Rib feature
                     }
                 }
@@ -415,20 +417,20 @@ module spacermount() {
             
             difference() {
                 
-                translate([0,legLength/2,legDia()/2-flatTopDepth]) {
+                translate([0,legLength/2,legDia()/2-(flatTopEnable == 1 ? flatTopDepth : 0)]) {
                     rotate([90,0,0]) {
                         leg(legLength);
                     }
                 }
                 
-                translate([-legDia()/2,-legLength/2,-flatTopDepth]) {
-                    cube([legDia(), legLength, legDia()/2-chamfer+flatTopDepth]);
+                translate([-legDia()/2,-legLength/2,-(flatTopEnable == 1 ? flatTopDepth : 0)]) {
+                    cube([legDia(), legLength, (flatTopEnable == 1 ? flatTopDepth : 0)]);
                 }
                 
             }
             
             translate([-legDia()/2+0.0005,-legLength/2,0]) { // Added offset to fix render geometry error.
-                chamfercube(legDia()-0.001,legLength,legDia()/2+chamfer-flatTopDepth);
+                chamfercube(legDia()-0.001,legLength,legDia()/2+chamfer-(flatTopEnable == 1 ? flatTopDepth : 0));
             }
 
             if (tabLength > 0 && skadisTab <= 0) {
@@ -464,7 +466,7 @@ module spacermount() {
         
         union() {
             
-            translate([0,legLength/2,legDia()/2-flatTopDepth]) {
+            translate([0,legLength/2,legDia()/2-(flatTopEnable == 1 ? flatTopDepth : 0)]) {
                 rotate([90,0,0]) {
                     dowelhole(legLength, screwOffset, teardropEnable, 0);
                 }
@@ -543,7 +545,7 @@ module crossconnect() {
             }
             
         // Flatten bottom if side legs for easier printing).
-        #if(crossAngle >= 0 && flatBottomEnable == 1){
+        if(crossAngle >= 0 && flatBottomEnable == 1){
             translate([0,0,(-legLength/2*cos(crossAngle))-(legDia()/2*cos(90-crossAngle))]) {
                 cylinder(h=flatBottomDepth,d=(legLength*2+legDia()+thickness));
                 }
