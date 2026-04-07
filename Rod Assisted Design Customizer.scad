@@ -6,7 +6,7 @@
 //number of faces, optimize for rendering / 3D printing. 
 $fn = 50; 
 
-// Dowel Connector Parameters
+// ---------- Dowel Connector Parameters ---------------------
 
 // 1 = dowel connector, 2 = spacer/panel mount, 3 = cross connector, 4 = endcap
 type = 1;
@@ -21,7 +21,7 @@ thickness = 6;
 chamfer = 3;
 
 // Total number of side legs. If legNum and horzAngle are more than 360 degrees it will evenly distribute leg count around center leg.
-legNum = 3; 
+legNum = 2; 
 
 // Horizontal angle (degrees) between side legs. If total is over 360, legs are evenly spaced instead.
 horzAngle = 90;
@@ -30,7 +30,7 @@ horzAngle = 90;
 vertAngle = 0; 
 
 // If this list is populated, it will override the horzAngle and populate . If it one 360 degrees it'll be ignored. example [0, 30, 180, 270]
-horzAngleList = [0, 90, 135];
+horzAngleList = [];
 
 // Legth in mm for the center leg, this is to compensate for the possible angles of side legs as you might want clearance to access screw holes, or have a shorter middle leg for some reason.
 centerLegLength = 50;
@@ -45,7 +45,7 @@ ribSize = 20;
 // Adding internal leg stoppers to prevent dowels going too far and intersecting
 // Only available for connector, not for spacer/panel mount or cross connector. 
 // The geometry might have issues with certain angles.
-// 0 = disabled, 1 = stoppers in leg(s) and center leg, 2 = stoppers in leg(s) only
+// 0 = disabled, 1 = stoppers in leg(s) only, 2 = stoppers in leg(s) and center leg.
 stopperEnable = 1;
 
 // If vertical angle is positive, it flattens bottom for printing or shelves. 1 = True
@@ -68,22 +68,22 @@ flatTopDepth = 3;
 // Arched top of dowel hole to reduce overhangs. 1 = True 
 teardropEnable = 1;
 
-// Screw parameters
+// ---------- Screw parameters ----------------
 
-// 1 = True, enables screw holes.
-screwEnable = 1;
+// Screws enabled if angle list is populated. Add angle for screws separate by comma, example: [0, 180] for top and bottom, or [90, 270] for sides, [0, 90, 180, 270} for top and sides.
+// You may have some intersection issues with screw holes depending on angles.
+
+//screwAngle = 0;
+screwAngleList = [0, 180];
 
 // Enable countersink for screws.
 screwEnableCS = 1;
+
 // Enable counterbore for screws.
 screwEnableCB = 0;
 
 // Diameter in mm for screw hole.
 screwDia = 4;
-
-// Angle in degrees on the leg where screw hole is placed. Top/Bottom holes = 0, Sides = 90. 
-// You may have some intersecting geometry issues or may not be able to reach it the screws depending on the angle. 
-screwAngle = 0;
 
 // Offset in mm for screw hole from leg length inward, a higher value goes towards the center. 
 screwOffset = 18; 
@@ -92,25 +92,24 @@ screwOffset = 18;
 screwDepth = 0;
 
 // Counterbore screw diameter in mm for screw heads.
-screwCBDia = 6.5;
+screwCBDia = 9;
 
-//Spacer/Panel Mount Parameters
+// --------- Spacer/Panel Mount Parameters ----------------
 
 // For spacer/panel mounts, the lenth of the tab. 0 or skadisTab enabled diables it.
-tabLength = 26;
+tabLength = 25;
 
 // For spacer/panel mount, it adds a Ikea Skadis capable hook. 0 = disabled, 1 = verticle, 2 = horizontal. 
 // Fixed dimensions so may cause interference issues. 
 skadisTab = 0;
 
-// Cross connector and endcap
+// ------------ Cross connector and endcap ---------------
 
 // If selected, the angle of the crossing connectors in degrees. Cross connector uses legLengt parameter. Uses flatBottomDepth if enabled and positive for easier printing. 0 or 90 just make a single leg, with double screws, might be useful as a splice joint. 
 crossAngle = 30;
 
 // If selected, the length of the endcap piece. Used as a foot or stopper.
-endcapLength = 20;
-
+endcapLength = 40;
 
 // Function to total leg diameter.
 function legDia() = dowelDia+thickness*2;
@@ -190,35 +189,28 @@ module dowelhole(length, offsetScrew, teardrop, stopper){
 
     
     // Screw hole if enabled
-    if(screwEnable == 1){
-        translate([0,0,offsetScrew]) {
-            rotate([90,0,screwAngle]){
-                cylinder(h=legDia(), d = screwDia, center = true);
+    if(len(screwAngleList) > 0){
+        for(screwAngle = screwAngleList) {
+        
+            translate([0,0,offsetScrew]) {
+                rotate([90,0,screwAngle]){
+                    cylinder(h=legDia()/2, d = screwDia, center = false);
+                }
             }
-        }
-    }
-    
-    // Screw hole countersinks on top and bottom    
+            
+            // Screw hole countersinks on top and bottom    
 
-    translate([(legDia()+screwDepth/2)*sin(180-screwAngle)/2,(legDia()+screwDepth/2)*cos(180-screwAngle)/2,offsetScrew]) {
-        rotate([0,90,90+screwAngle]){
-            if(screwEnable == 1 && screwEnableCS == 1){
-                cylinder(h=thickness-screwDepth, d1 = thickness*2+screwDia, d2 = screwDia);
-            }
-            if(screwEnable == 1 && screwEnableCB == 1){
-                cylinder(h=thickness-screwDepth, d=screwCBDia);
-            }
-        }
-    }    
-    translate([-(legDia()+screwDepth/2)*sin(180-screwAngle)/2,-(legDia()+screwDepth/2)*cos(180-screwAngle)/2,offsetScrew]) {
-        rotate([0,90,-90+screwAngle]){
-            if(screwEnable == 1 && screwEnableCS == 1){
-                cylinder(h=thickness-screwDepth, d1 = thickness*2+screwDia, d2 = screwDia);
-            }
-            if(screwEnable == 1 && screwEnableCB == 1){
-                cylinder(h=thickness-screwDepth, d=screwCBDia);
-            }
-        }
+            translate([(legDia()+screwDepth/2)*sin(180-screwAngle)/2,(legDia()+screwDepth/2)*cos(180-screwAngle)/2,offsetScrew]) {
+                rotate([0,90,90+screwAngle]){
+                    if(screwEnableCS == 1){
+                        cylinder(h=thickness-screwDepth, d1 = thickness*2+screwDia, d2 = screwDia);
+                    }
+                    if(screwEnableCB == 1){
+                        cylinder(h=thickness-screwDepth, d=screwCBDia);
+                    }
+                }
+            }    
+        }    
     }
 
 }
